@@ -154,25 +154,22 @@
  */
 
 import { BROWSER } from "esm-env";
-import { onMount, tick, untrack } from "svelte";
-import { ReactiveListManager } from "$lib/index.js";
+import { onMount, tick } from "svelte";
 import {
 	DEFAULT_SCROLL_OPTIONS,
-	type SvelteVirtualListPreviousVisibleRange,
 	type SvelteVirtualListProps,
 	type SvelteVirtualListScrollOptions,
-} from "$lib/types";
+} from "$lib/types.js";
 import { calculateAverageHeightDebounced } from "$lib/utils/heightCalculation.js";
-import { isSignificantHeightChange } from "$lib/utils/heightChangeDetection.js";
 import { createRafScheduler } from "$lib/utils/raf.js";
-import { calculateScrollTarget } from "$lib/utils/scrollCalculation.js";
-import { createAdvancedThrottledCallback } from "$lib/utils/throttle.js";
 import {
 	calculateScrollPosition,
 	calculateTransformY,
 	calculateVisibleRange,
+	getScrollOffsetForIndex,
+	processChunked,
 	updateHeightAndScroll as utilsUpdateHeightAndScroll,
-} from "$lib/utils/virtualList";
+} from "$lib/utils/virtualList.js";
 import {
 	createDebugInfo,
 	shouldShowDebugInfo,
@@ -1387,5 +1384,9 @@ $effect(() => {
     .virtual-list-items > div {
         width: 100%;
         display: block;
+    }
+</style>
+    }
+</style>
     }
 </style>
