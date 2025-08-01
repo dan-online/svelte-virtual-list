@@ -62,194 +62,209 @@
 -->
 
 <script lang="ts" generics="TItem = unknown">
-    /**
-     * SvelteVirtualList Implementation Journey
-     *
-     * Evolution & Architecture:
-     * 1. Initial Implementation ✓
-     *    - Basic virtual scrolling with fixed height items
-     *    - Single direction scrolling (top-to-bottom)
-     *    - Simple viewport calculations
-     *
-     * 2. Dynamic Height Enhancement ✓
-     *    - Added dynamic height calculation system
-     *    - Implemented debounced measurements
-     *    - Created height averaging mechanism for performance
-     *
-     * 3. Bidirectional Scrolling ✓
-     *    - Added bottomToTop mode
-     *    - Solved complex initialization issues with flexbox
-     *    - Implemented careful scroll position management
-     *
-     * 4. Performance Optimizations ✓
-     *    - Added element recycling through keyed each blocks
-     *    - Implemented RAF for smooth animations
-     *    - Optimized DOM updates with transform translations
-     *
-     * 5. Stability Improvements ✓
-     *    - Added ResizeObserver for responsive updates
-     *    - Implemented proper cleanup on component destruction
-     *    - Added debug mode for development assistance
-     *
-     * 6. Large Dataset Optimizations ✓
-     *    - Implemented chunked processing for 10k+ items
-     *    - Added progressive initialization system
-     *    - Deferred height calculations for better initial load
-     *    - Optimized memory usage for large lists
-     *    - Added progress tracking for initialization
-     *
-     * 7. Size Management Improvements ✓
-     *    - Implemented height caching system for measured items
-     *    - Added smart height estimation for unmeasured items
-     *    - Optimized resize handling with debouncing
-     *    - Added height recalculation on content changes
-     *    - Implemented progressive height adjustments
-     *
-     * 8. Code Quality & Maintainability ✓
-     *    - Extracted debug utilities for better testing
-     *    - Improved type safety throughout
-     *    - Added comprehensive documentation
-     *    - Optimized debug output to reduce noise
-     *
-     * 9. Architecture Refactoring ✓
-     *    - Extracted scroll calculation logic to scrollCalculation.ts utility
-     *    - Extracted ResizeObserver utilities to resizeObserver.ts
-     *    - Added comprehensive test coverage for extracted utilities
-     *    - Improved separation of concerns and maintainability
-     *    - Simplified initialization (removed unnecessary chunked processing)
-     *
-     * 10. Future Improvements (Planned)
-     *    - Add horizontal scrolling support
-     *    - Implement variable-sized item caching
-     *    - Add keyboard navigation support
-     *    - Support for dynamic item updates
-     *    - Add accessibility enhancements
-     *
-     * Technical Challenges Solved:
-     * - Bottom-to-top scrolling in flexbox layouts
-     * - Dynamic height calculations without layout thrashing
-     * - Smooth scrolling on various devices
-     * - Memory management for large lists
-     * - Browser compatibility issues
-     * - Performance optimization for 10k+ items
-     * - Progressive initialization for large datasets
-     * - Debug output optimization
-     * - Accurate size calculations with caching
-     * - Responsive size adjustments
-     * - Modular architecture with testable utility functions
-     *
-     * Current Architecture:
-     * - Four-layer DOM structure for optimal performance
-     * - State management using Svelte 5's $state
-     * - Reactive height and scroll calculations
-     * - Configurable buffer zones for smooth scrolling
-     * - Modular utility system with dedicated helper files:
-     *   * scrollCalculation.ts: Complex scroll positioning logic
-     *   * resizeObserver.ts: ResizeObserver management utilities
-     *   * heightCalculation.ts: Debounced height measurement
-     *   * virtualList.ts: Core virtual list calculations
-     *   * virtualListDebug.ts: Debug information utilities
-     * - Height caching and estimation system
-     * - Progressive size adjustment system
-     */
+/**
+ * SvelteVirtualList Implementation Journey
+ *
+ * Evolution & Architecture:
+ * 1. Initial Implementation ✓
+ *    - Basic virtual scrolling with fixed height items
+ *    - Single direction scrolling (top-to-bottom)
+ *    - Simple viewport calculations
+ *
+ * 2. Dynamic Height Enhancement ✓
+ *    - Added dynamic height calculation system
+ *    - Implemented debounced measurements
+ *    - Created height averaging mechanism for performance
+ *
+ * 3. Bidirectional Scrolling ✓
+ *    - Added bottomToTop mode
+ *    - Solved complex initialization issues with flexbox
+ *    - Implemented careful scroll position management
+ *
+ * 4. Performance Optimizations ✓
+ *    - Added element recycling through keyed each blocks
+ *    - Implemented RAF for smooth animations
+ *    - Optimized DOM updates with transform translations
+ *
+ * 5. Stability Improvements ✓
+ *    - Added ResizeObserver for responsive updates
+ *    - Implemented proper cleanup on component destruction
+ *    - Added debug mode for development assistance
+ *
+ * 6. Large Dataset Optimizations ✓
+ *    - Implemented chunked processing for 10k+ items
+ *    - Added progressive initialization system
+ *    - Deferred height calculations for better initial load
+ *    - Optimized memory usage for large lists
+ *    - Added progress tracking for initialization
+ *
+ * 7. Size Management Improvements ✓
+ *    - Implemented height caching system for measured items
+ *    - Added smart height estimation for unmeasured items
+ *    - Optimized resize handling with debouncing
+ *    - Added height recalculation on content changes
+ *    - Implemented progressive height adjustments
+ *
+ * 8. Code Quality & Maintainability ✓
+ *    - Extracted debug utilities for better testing
+ *    - Improved type safety throughout
+ *    - Added comprehensive documentation
+ *    - Optimized debug output to reduce noise
+ *
+ * 9. Architecture Refactoring ✓
+ *    - Extracted scroll calculation logic to scrollCalculation.ts utility
+ *    - Extracted ResizeObserver utilities to resizeObserver.ts
+ *    - Added comprehensive test coverage for extracted utilities
+ *    - Improved separation of concerns and maintainability
+ *    - Simplified initialization (removed unnecessary chunked processing)
+ *
+ * 10. Future Improvements (Planned)
+ *    - Add horizontal scrolling support
+ *    - Implement variable-sized item caching
+ *    - Add keyboard navigation support
+ *    - Support for dynamic item updates
+ *    - Add accessibility enhancements
+ *
+ * Technical Challenges Solved:
+ * - Bottom-to-top scrolling in flexbox layouts
+ * - Dynamic height calculations without layout thrashing
+ * - Smooth scrolling on various devices
+ * - Memory management for large lists
+ * - Browser compatibility issues
+ * - Performance optimization for 10k+ items
+ * - Progressive initialization for large datasets
+ * - Debug output optimization
+ * - Accurate size calculations with caching
+ * - Responsive size adjustments
+ * - Modular architecture with testable utility functions
+ *
+ * Current Architecture:
+ * - Four-layer DOM structure for optimal performance
+ * - State management using Svelte 5's $state
+ * - Reactive height and scroll calculations
+ * - Configurable buffer zones for smooth scrolling
+ * - Modular utility system with dedicated helper files:
+ *   * scrollCalculation.ts: Complex scroll positioning logic
+ *   * resizeObserver.ts: ResizeObserver management utilities
+ *   * heightCalculation.ts: Debounced height measurement
+ *   * virtualList.ts: Core virtual list calculations
+ *   * virtualListDebug.ts: Debug information utilities
+ * - Height caching and estimation system
+ * - Progressive size adjustment system
+ */
 
-    import {
-        DEFAULT_SCROLL_OPTIONS,
-        type SvelteVirtualListPreviousVisibleRange,
-        type SvelteVirtualListProps,
-        type SvelteVirtualListScrollOptions
-    } from '$lib/types.js'
-    import { calculateAverageHeightDebounced } from '$lib/utils/heightCalculation.js'
-    import { createRafScheduler } from '$lib/utils/raf.js'
-    import { isSignificantHeightChange } from '$lib/utils/heightChangeDetection.js'
-    import {
-        calculateScrollPosition,
-        calculateTransformY,
-        calculateVisibleRange,
-        updateHeightAndScroll as utilsUpdateHeightAndScroll
-    } from '$lib/utils/virtualList.js'
-    import { createDebugInfo, shouldShowDebugInfo } from '$lib/utils/virtualListDebug.js'
-    import { calculateScrollTarget } from '$lib/utils/scrollCalculation.js'
-    import { createAdvancedThrottledCallback } from '$lib/utils/throttle.js'
-    import { ReactiveListManager } from '$lib/index.js'
-    import { BROWSER } from 'esm-env'
-    import { onMount, tick, untrack } from 'svelte'
+import { BROWSER } from "esm-env";
+import { onMount, tick, untrack } from "svelte";
+import { ReactiveListManager } from "$lib/index.js";
+import {
+	DEFAULT_SCROLL_OPTIONS,
+	type SvelteVirtualListPreviousVisibleRange,
+	type SvelteVirtualListProps,
+	type SvelteVirtualListScrollOptions,
+} from "$lib/types";
+import { calculateAverageHeightDebounced } from "$lib/utils/heightCalculation.js";
+import { isSignificantHeightChange } from "$lib/utils/heightChangeDetection.js";
+import { createRafScheduler } from "$lib/utils/raf.js";
+import { calculateScrollTarget } from "$lib/utils/scrollCalculation.js";
+import { createAdvancedThrottledCallback } from "$lib/utils/throttle.js";
+import {
+	calculateScrollPosition,
+	calculateTransformY,
+	calculateVisibleRange,
+	updateHeightAndScroll as utilsUpdateHeightAndScroll,
+} from "$lib/utils/virtualList";
+import {
+	createDebugInfo,
+	shouldShowDebugInfo,
+} from "$lib/utils/virtualListDebug.js";
 
-    const rafSchedule = createRafScheduler()
-    // Package-specific debug flag - safe for library distribution
-    // Enable with: NODE_ENV=development SVELTE_VIRTUAL_LIST_DEBUG=true
-    const INTERNAL_DEBUG =
-        import.meta.env.DEV && import.meta.env.VITE_SVELTE_VIRTUAL_LIST_DEBUG === 'true'
-    /**
-     * Core configuration props with default values
-     * @type {SvelteVirtualListProps<TItem>}
-     */
-    const {
-        items = [], // Array of items to be rendered in the virtual list
-        defaultEstimatedItemHeight = 40, // Initial height estimate for items before measurement
-        debug = false, // Enable debug logging
-        renderItem, // Function to render each item
-        containerClass, // Custom class for the container element
-        viewportClass, // Custom class for the viewport element
-        contentClass, // Custom class for the content wrapper
-        itemsClass, // Custom class for the items wrapper
-        debugFunction, // Custom debug logging function
-        mode = 'topToBottom', // Scroll direction mode
-        bufferSize = 20, // Number of items to render outside visible area
-        testId // Base test ID for component elements (undefined = no data-testid attributes)
-    }: SvelteVirtualListProps<TItem> = $props()
+const rafSchedule = createRafScheduler();
+// Package-specific debug flag - safe for library distribution
+// Enable with: NODE_ENV=development SVELTE_VIRTUAL_LIST_DEBUG=true
+const INTERNAL_DEBUG =
+	import.meta.env.DEV &&
+	import.meta.env.VITE_SVELTE_VIRTUAL_LIST_DEBUG === "true";
+/**
+ * Core configuration props with default values
+ * @type {SvelteVirtualListProps<TItem>}
+ */
+const {
+	items = [], // Array of items to be rendered in the virtual list
+	defaultEstimatedItemHeight = 40, // Initial height estimate for items before measurement
+	debug = false, // Enable debug logging
+	renderItem, // Function to render each item
+	containerClass, // Custom class for the container element
+	viewportClass, // Custom class for the viewport element
+	contentClass, // Custom class for the content wrapper
+	itemsClass, // Custom class for the items wrapper
+	debugFunction, // Custom debug logging function
+	mode = "topToBottom", // Scroll direction mode
+	bufferSize = 20, // Number of items to render outside visible area
+	testId, // Base test ID for component elements (undefined = no data-testid attributes)
+}: SvelteVirtualListProps<TItem> = $props();
 
-    /**
-     * DOM References and Core State
-     */
-    const itemElements = $state<HTMLElement[]>([]) // Array of rendered item element references
+/**
+ * DOM References and Core State
+ */
+let containerElement: HTMLElement; // Reference to the main container element
+let viewportElement: HTMLElement; // Reference to the scrollable viewport element
+let itemsElement: HTMLElement;
+const itemElements = $state<HTMLElement[]>([]); // Array of rendered item element references
 
-    /**
-     * Scroll and Height Management
-     */
-    let height = $state(0) // Container height
+/**
+ * Scroll and Height Management
+ */
+let height = $state(0); // Container height
+const calculatedItemHeight = $state(defaultEstimatedItemHeight); // Current average item height
+let gridColumns = 1;
 
-    /**
-     * State Flags and Control
-     */
+/**
+ * State Flags and Control
+ */
 
-    const isCalculatingHeight = $state(false) // Prevents concurrent height calculations
-    let isScrolling = $state(false) // Tracks active scrolling state
-    let lastMeasuredIndex = $state(-1) // Index of last measured item
-    let lastScrollTopSnapshot = $state(0) // Previous scroll position snapshot
+const isCalculatingHeight = $state(false); // Prevents concurrent height calculations
+let isScrolling = $state(false); // Tracks active scrolling state
+let lastMeasuredIndex = $state(-1); // Index of last measured item
+let lastScrollTopSnapshot = $state(0); // Previous scroll position snapshot
 
-    /**
-     * Timers and Observers
-     */
-    let heightUpdateTimeout: ReturnType<typeof setTimeout> | null = null // Debounce timer for height updates
-    let resizeObserver: ResizeObserver | null = null // Watches for container size changes
-    let itemResizeObserver: ResizeObserver | null = null // Watches for individual item size changes
+/**
+ * Timers and Observers
+ */
+let heightUpdateTimeout: ReturnType<typeof setTimeout> | null = null; // Debounce timer for height updates
+let resizeObserver: ResizeObserver | null = null; // Watches for container size changes
+let itemResizeObserver: ResizeObserver | null = null; // Watches for individual item size changes
 
-    /**
-     * Performance Optimization State
-     */
-    const dirtyItems = $state(new Set<number>()) // Set of item indices that need height recalculation
-    let dirtyItemsCount = $state(0) // Reactive count of dirty items
-    // Fallback measurement used only when height has not been established yet
-    let measuredFallbackHeight = $state(0)
+/**
+ * Performance Optimization State
+ */
+const dirtyItems = $state(new Set<number>()); // Set of item indices that need height recalculation
+let dirtyItemsCount = $state(0); // Reactive count of dirty items
+// Fallback measurement used only when height has not been established yet
+let measuredFallbackHeight = $state(0);
 
-    let prevVisibleRange = $state<SvelteVirtualListPreviousVisibleRange | null>(null)
-    let prevHeight = $state<number>(0)
-    let prevTotalHeightForScrollCorrection = $state<number>(0)
-    let lastBottomDistance = $state<number | null>(null)
+let prevVisibleRange = $state<SvelteVirtualListPreviousVisibleRange | null>(
+	null,
+);
+let prevHeight = $state<number>(0);
+let prevTotalHeightForScrollCorrection = $state<number>(0);
+let lastBottomDistance = $state<number | null>(null);
 
-    /**
-     * Reactive Height Manager - O(1) height calculation system
-     * Replaces O(n) totalHeight loop with incremental updates
-     */
-    const heightManager = new ReactiveListManager({
-        itemLength: items.length,
-        itemHeight: defaultEstimatedItemHeight,
-        internalDebug: INTERNAL_DEBUG
-    })
+/**
+ * Reactive Height Manager - O(1) height calculation system
+ * Replaces O(n) totalHeight loop with incremental updates
+ */
+const heightManager = new ReactiveListManager({
+	itemLength: items.length,
+	itemHeight: defaultEstimatedItemHeight,
+	internalDebug: INTERNAL_DEBUG,
+});
 
-    // Dynamic update coordination to avoid UA scroll anchoring interference
-    let suppressBottomAnchoringUntilMs = $state(0)
+// Add new effect to handle height changes
+$effect(() => {
+        if (BROWSER && initialized && mode === 'bottomToTop' && viewportElement) {
+            const totalRows = Math.ceil(items.length / gridColumns)
+            const totalHeight = Math.max(0, totalRows * calculatedItemHeight);
+            const targetScrollTop = Math.max(0, totalHeight - height)
 
     const displayItems = $derived(() => {
         const visibleRange = visibleItems()
@@ -556,9 +571,9 @@
             mode === 'bottomToTop' &&
             heightManager.viewportElement
         ) {
-            const targetScrollTop = Math.max(0, totalHeight() - height)
-            const currentScrollTop = heightManager.viewport.scrollTop
-            const scrollDifference = Math.abs(currentScrollTop - targetScrollTop)
+            const totalRows = Math.ceil(items.length / gridColumns)
+            const totalHeight = Math.max(0, totalRows * calculatedItemHeight);
+            const targetScrollTop = Math.max(0, totalHeight - height)
 
             // Only correct scroll if:
             // 1. Item height changed significantly (not just user scrolling)
@@ -666,6 +681,12 @@
         }
     })
 
+    function updateGridColumns() {
+        // Use the actual grid element reference if needed!
+        const columns = getGridTemplateColumnsAmount(itemsElement);
+        gridColumns = columns ? Number(columns) : 1;
+    }
+
     /**
      * Calculates the range of items that should be rendered based on current scroll position.
      *
@@ -721,7 +742,8 @@
         lastVisibleRange = calculateVisibleRange(
             heightManager.scrollTop,
             viewportHeight,
-            heightManager.averageHeight,
+            calculatedItemHeight,
+            gridColumns,
             items.length,
             bufferSize,
             mode,
@@ -818,8 +840,9 @@
 
                             const targetScrollTop = calculateScrollPosition(
                                 items.length,
-                                heightManager.averageHeight,
-                                finalHeight
+                                calculatedItemHeight,
+                                finalHeight,
+                                gridColumns
                             )
 
                             void heightManager.container.offsetHeight
@@ -907,9 +930,38 @@
         })
     }
 
+    function getGridTemplateColumnsAmount(element: HTMLElement): number | null {
+        if (!element) return null;
+
+        const computedStyle = window.getComputedStyle(element);
+        const gridTemplateColumns = computedStyle.getPropertyValue('grid-template-columns');
+
+        return gridTemplateColumns.split(' ').length || null;
+    }
+
+    // Modify the mount effect to use chunked initialization
+    $effect(() => {
+        if (BROWSER && items.length > 1000) {
+            initializeChunked()
+        } else {
+            initialized = true
+        }
+    })
+
     // Setup and cleanup
     onMount(() => {
         if (BROWSER) {
+            updateGridColumns();
+
+              resizeObserver = new ResizeObserver(() => {
+                updateGridColumns();
+                updateHeightAndScroll(true); // force recalculation
+            });
+
+            if (itemsElement) {
+                resizeObserver.observe(itemsElement);
+            }
+
             // Initial setup of heights and scroll position
             updateHeightAndScroll()
             // Ensure one initial measurement pass even if no ResizeObserver fires
@@ -1046,23 +1098,65 @@
 
         const { start: firstVisibleIndex, end: lastVisibleIndex } = visibleItems()
 
-        // Use extracted scroll calculation utility
-        const scrollTarget = calculateScrollTarget({
-            mode,
-            align: align || 'auto',
-            targetIndex,
-            itemsLength: items.length,
-            calculatedItemHeight: heightManager.averageHeight, // Use dynamic average from ReactiveListManager
-            height,
-            scrollTop: heightManager.scrollTop,
-            firstVisibleIndex,
-            lastVisibleIndex,
-            heightCache: heightManager.getHeightCache()
-        })
-
-        // Handle early return for 'nearest' alignment when item is already visible
-        if (scrollTarget === null) {
-            return
+        if (mode === 'bottomToTop') {
+            const totalRows = Math.ceil(items.length / gridColumns)
+            const totalHeight = Math.max(0, totalRows * calculatedItemHeight);
+            const itemOffset = targetIndex * calculatedItemHeight
+            const itemHeight = calculatedItemHeight
+            if (align === 'auto') {
+                if (targetIndex < firstVisibleIndex) {
+                    // Align to top
+                    scrollTarget = Math.max(0, totalHeight - (itemOffset + itemHeight))
+                } else if (targetIndex > lastVisibleIndex - 1) {
+                    // Align to bottom
+                    scrollTarget = Math.max(0, totalHeight - itemOffset - height)
+                } else {
+                    // Already in view, do nothing
+                    return
+                }
+            } else if (align === 'top') {
+                // Align to top
+                scrollTarget = Math.max(0, totalHeight - (itemOffset + itemHeight))
+            } else if (align === 'bottom') {
+                // Align to bottom
+                scrollTarget = Math.max(0, totalHeight - itemOffset - height)
+            }
+        } else {
+            // topToBottom (default)
+            if (align === 'auto') {
+                if (targetIndex < firstVisibleIndex) {
+                    // Scroll so item is at the top
+                    scrollTarget = getScrollOffsetForIndex(
+                        heightCache,
+                        calculatedItemHeight,
+                        targetIndex
+                    )
+                } else if (targetIndex > lastVisibleIndex - 1) {
+                    // Scroll so item is at the bottom
+                    const itemBottom = getScrollOffsetForIndex(
+                        heightCache,
+                        calculatedItemHeight,
+                        targetIndex + 1
+                    )
+                    scrollTarget = Math.max(0, itemBottom - height)
+                } else {
+                    // Already in view, do nothing
+                    return
+                }
+            } else if (align === 'top') {
+                scrollTarget = getScrollOffsetForIndex(
+                    heightCache,
+                    calculatedItemHeight,
+                    targetIndex
+                )
+            } else if (align === 'bottom') {
+                const itemBottom = getScrollOffsetForIndex(
+                    heightCache,
+                    calculatedItemHeight,
+                    targetIndex + 1
+                )
+                scrollTarget = Math.max(0, itemBottom - height)
+            }
         }
 
         // Prevent bottom-anchoring logic from interfering with programmatic scroll
@@ -1189,38 +1283,22 @@
             id="virtual-list-content"
             {...testId ? { 'data-testid': `${testId}-content` } : {}}
             class={contentClass ?? 'virtual-list-content'}
-            style:height="{(() => Math.max(height, totalHeight()))()}px"
+            style:height="{Math.max(height, Math.ceil(items.length / gridColumns) * calculatedItemHeight)}px"
         >
             <!-- Items container is translated to show correct items -->
             <div
                 id="virtual-list-items"
                 {...testId ? { 'data-testid': `${testId}-items` } : {}}
                 class={itemsClass ?? 'virtual-list-items'}
-                style:visibility={height === 0 && mode === 'bottomToTop' ? 'hidden' : 'visible'}
-                style:transform="translateY({(() => {
-                    const viewportHeight = height || measuredFallbackHeight || 0
-                    const visibleRange = visibleItems()
-
-                    // Avoid synchronous DOM reads here; fall back once if height is 0
-                    const effectiveHeight = viewportHeight === 0 ? 400 : viewportHeight
-
-                    // Use precise offset for topToBottom using measured heights when available
-                    const transform = Math.round(
-                        calculateTransformY(
-                            mode,
-                            items.length,
-                            visibleRange.end,
-                            visibleRange.start,
-                            heightManager.averageHeight,
-                            effectiveHeight,
-                            totalHeight(),
-                            heightManager.getHeightCache(),
-                            measuredFallbackHeight
-                        )
-                    )
-
-                    return transform
-                })()}px)"
+                bind:this={itemsElement}
+                style:transform="translateY({calculateTransformY(
+                    mode,
+                    items.length,
+                    visibleItems().end,
+                    visibleItems().start,
+                    calculatedItemHeight,
+                    gridColumns
+                )}px)"
             >
                 {#each displayItems() as currentItemWithIndex, i (currentItemWithIndex.originalIndex)}
                     <!-- Only debug when visible range or average height changes -->
@@ -1296,6 +1374,16 @@
     }
 
     /* Item wrapper divs should size to their content */
+    .virtual-list-items > div {
+        width: 100%;
+        display: block;
+    }
+</style>
+    .virtual-list-items > div {
+        width: 100%;
+        display: block;
+    }
+</style>
     .virtual-list-items > div {
         width: 100%;
         display: block;

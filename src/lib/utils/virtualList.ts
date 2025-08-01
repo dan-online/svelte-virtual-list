@@ -11,15 +11,18 @@ import type { VirtualListSetters, VirtualListState } from '$lib/utils/types.js'
  * @param {number} totalItems - The total number of items in the list
  * @param {number} itemHeight - The height of each individual item in pixels
  * @param {number} containerHeight - The visible height of the container in pixels
+ * @param {number} gridColumns
  * @returns {number} The maximum scroll position in pixels
  */
 export const calculateScrollPosition = (
     totalItems: number,
     itemHeight: number,
-    containerHeight: number
+    containerHeight: number,
+    gridColumns: number = 1
 ) => {
     if (totalItems === 0) return 0
-    const totalHeight = totalItems * itemHeight
+    const totalRows = Math.ceil(totalItems / gridColumns)
+    const totalHeight = Math.max(0, totalRows * itemHeight);
     return Math.max(0, totalHeight - containerHeight)
 }
 
@@ -33,6 +36,7 @@ export const calculateScrollPosition = (
  * @param {number} scrollTop - Current scroll position in pixels
  * @param {number} viewportHeight - Height of the visible area in pixels
  * @param {number} itemHeight - Height of each list item in pixels
+ * @param {number} gridColumns - Number of columns in the grid (default 1 for list)
  * @param {number} totalItems - Total number of items in the list
  * @param {number} bufferSize - Number of items to render outside the visible area
  * @param {SvelteVirtualListMode} mode - Scroll direction mode
@@ -42,81 +46,32 @@ export const calculateVisibleRange = (
     scrollTop: number,
     viewportHeight: number,
     itemHeight: number,
+    gridColumns: number = 1,
     totalItems: number,
     bufferSize: number,
-    mode: SvelteVirtualListMode,
-    atBottom: boolean,
-    wasAtBottomBeforeHeightChange: boolean,
-    lastVisibleRange: SvelteVirtualListPreviousVisibleRange | null,
-    totalContentHeight?: number,
-    heightCache?: Record<number, number>
-): SvelteVirtualListPreviousVisibleRange => {
+    mode: SvelteVirtualListMode
+) => {
+    if (gridColumns < 1) gridColumns = 1;
+    const totalRows = Math.ceil(totalItems / gridColumns);
+
     if (mode === 'bottomToTop') {
-        const visibleCount = Math.ceil(viewportHeight / itemHeight) + 1
-
-        // In bottomToTop mode, scrollTop represents distance from the total content end
-        // scrollTop = 0 means we're at the beginning (showing first items)
-        // scrollTop = maxScrollTop means we're at the end (showing last items)
-        const totalHeight = totalContentHeight ?? totalItems * itemHeight
-        const maxScrollTop = Math.max(0, totalHeight - viewportHeight)
-
-        // Convert scrollTop to "distance from start" for bottomToTop
-        const distanceFromStart = maxScrollTop - scrollTop
-        const startIndex = Math.floor(distanceFromStart / itemHeight)
-
-        // Safeguard: handle edge cases
-        if (startIndex < 0) {
-            // We're scrolled beyond the maximum (showing first items)
-            const start = 0
-            const end = Math.min(totalItems, visibleCount + bufferSize * 2)
-
-            return { start, end } as SvelteVirtualListPreviousVisibleRange
-        }
-
+        const visibleRows = Math.ceil(viewportHeight / itemHeight) + 1;
+        const bottomRowIndex = totalRows - Math.floor(scrollTop / itemHeight);
         // Add buffer to both ends
-        const start = Math.max(0, startIndex - bufferSize)
-        const end = Math.min(totalItems, startIndex + visibleCount + bufferSize)
-
-        return { start, end } as SvelteVirtualListPreviousVisibleRange
-    } else {
-        const start = Math.floor(scrollTop / itemHeight)
-        const end = Math.min(totalItems, start + Math.ceil(viewportHeight / itemHeight) + 1)
-
-        // Safeguard for topToBottom: ensure last item is fully visible when at max scroll
-        const totalHeight = totalContentHeight ?? totalItems * itemHeight
-        const maxScrollTop = Math.max(0, totalHeight - viewportHeight)
-        // Use strict tolerance to avoid premature bottom anchoring that leaves a visible gap
-        const tolerance = Math.max(1, Math.floor(itemHeight * 0.25)) // pixels, adaptive for wrong initial sizes
-        const isAtBottom = Math.abs(scrollTop - maxScrollTop) <= tolerance
-
-        if (isAtBottom) {
-            // Pack from the end using measured heights when available: walk backward until viewport filled
-            const adjustedEnd = totalItems
-            let startCore = adjustedEnd
-            let acc = 0
-            const getH = (i: number) => {
-                const v = heightCache ? heightCache[i] : undefined
-                return Number.isFinite(v) && (v as number) > 0 ? (v as number) : itemHeight
-            }
-            while (startCore > 0 && acc < viewportHeight) {
-                const h = getH(startCore - 1)
-                acc += h
-                startCore -= 1
-            }
-            return {
-                start: Math.max(0, startCore - bufferSize),
-                end: adjustedEnd
-            } as SvelteVirtualListPreviousVisibleRange
-        }
-
-        // Add buffer to both ends
-        const finalStart = Math.max(0, start - bufferSize)
-        const finalEnd = Math.min(totalItems, end + bufferSize)
-
+        const startRow = Math.max(0, bottomRowIndex - visibleRows - bufferSize);
+        const endRow = Math.min(totalRows, bottomRowIndex + bufferSize);
         return {
-            start: finalStart,
-            end: finalEnd
-        } as SvelteVirtualListPreviousVisibleRange
+            start: startRow * gridColumns,
+            end: Math.min(totalItems, endRow * gridColumns)
+        };
+    } else {
+        // topToBottom (default)
+        const startRow = Math.floor(scrollTop / itemHeight);
+        const endRow = Math.min(totalRows, startRow + Math.ceil(viewportHeight / itemHeight) + 1);
+        return {
+            start: Math.max(0, startRow * gridColumns - bufferSize * gridColumns),
+            end: Math.min(totalItems, endRow * gridColumns + bufferSize * gridColumns)
+        };
     }
 }
 
@@ -132,7 +87,7 @@ export const calculateVisibleRange = (
  * @param {number} visibleEnd - Index of the last visible item
  * @param {number} visibleStart - Index of the first visible item
  * @param {number} itemHeight - Height of each list item in pixels
- * @param {number} viewportHeight - Height of the viewport in pixels
+ * @param {number} gridColumns - Amount of grid columns
  * @returns {number} The calculated transform Y value in pixels
  */
 export const calculateTransformY = (
@@ -141,30 +96,15 @@ export const calculateTransformY = (
     visibleEnd: number,
     visibleStart: number,
     itemHeight: number,
-    viewportHeight: number,
-    totalContentHeight?: number,
-    heightCache?: Record<number, number>,
-    measuredFallbackHeight?: number
+    gridColumns: number = 1
 ) => {
-    const effectiveViewport = viewportHeight || measuredFallbackHeight || 0
+    const startRow = Math.floor(visibleStart / gridColumns)
     if (mode === 'bottomToTop') {
-        // In bottomToTop mode, position items so they stack from bottom up
-        const actualTotalHeight = totalContentHeight ?? totalItems * itemHeight
-
-        // Calculate transform to position visible items correctly
-        const basicTransform = (totalItems - visibleEnd) * itemHeight
-
-        // When content is smaller than viewport, push to bottom
-        const bottomOffset = Math.max(0, effectiveViewport - actualTotalHeight)
-
-        return basicTransform + bottomOffset
+        const totalRows = Math.ceil(totalItems / gridColumns)
+        const endRow = Math.ceil(visibleEnd / gridColumns)
+        return (totalRows - endRow) * itemHeight
     } else {
-        // For topToBottom, prefer precise offset using measured heights when available
-        if (heightCache) {
-            const offset = getScrollOffsetForIndex(heightCache, itemHeight, visibleStart)
-            return Math.max(0, Math.round(offset))
-        }
-        return visibleStart * itemHeight
+        return startRow * itemHeight
     }
 }
 
