@@ -61,97 +61,85 @@
     MIT License © Humanspeak, Inc.
 -->
 
-<script lang="ts" generics="TItem = unknown">
-/**
- * SvelteVirtualList Implementation Journey
- *
- * Evolution & Architecture:
- * 1. Initial Implementation ✓
- *    - Basic virtual scrolling with fixed height items
- *    - Single direction scrolling (top-to-bottom)
- *    - Simple viewport calculations
- *
- * 2. Dynamic Height Enhancement ✓
- *    - Added dynamic height calculation system
- *    - Implemented debounced measurements
- *    - Created height averaging mechanism for performance
- *
- * 3. Bidirectional Scrolling ✓
- *    - Added bottomToTop mode
- *    - Solved complex initialization issues with flexbox
- *    - Implemented careful scroll position management
- *
- * 4. Performance Optimizations ✓
- *    - Added element recycling through keyed each blocks
- *    - Implemented RAF for smooth animations
- *    - Optimized DOM updates with transform translations
- *
- * 5. Stability Improvements ✓
- *    - Added ResizeObserver for responsive updates
- *    - Implemented proper cleanup on component destruction
- *    - Added debug mode for development assistance
- *
- * 6. Large Dataset Optimizations ✓
- *    - Implemented chunked processing for 10k+ items
- *    - Added progressive initialization system
- *    - Deferred height calculations for better initial load
- *    - Optimized memory usage for large lists
- *    - Added progress tracking for initialization
- *
- * 7. Size Management Improvements ✓
- *    - Implemented height caching system for measured items
- *    - Added smart height estimation for unmeasured items
- *    - Optimized resize handling with debouncing
- *    - Added height recalculation on content changes
- *    - Implemented progressive height adjustments
- *
- * 8. Code Quality & Maintainability ✓
- *    - Extracted debug utilities for better testing
- *    - Improved type safety throughout
- *    - Added comprehensive documentation
- *    - Optimized debug output to reduce noise
- *
- * 9. Architecture Refactoring ✓
- *    - Extracted scroll calculation logic to scrollCalculation.ts utility
- *    - Extracted ResizeObserver utilities to resizeObserver.ts
- *    - Added comprehensive test coverage for extracted utilities
- *    - Improved separation of concerns and maintainability
- *    - Simplified initialization (removed unnecessary chunked processing)
- *
- * 10. Future Improvements (Planned)
- *    - Add horizontal scrolling support
- *    - Implement variable-sized item caching
- *    - Add keyboard navigation support
- *    - Support for dynamic item updates
- *    - Add accessibility enhancements
- *
- * Technical Challenges Solved:
- * - Bottom-to-top scrolling in flexbox layouts
- * - Dynamic height calculations without layout thrashing
- * - Smooth scrolling on various devices
- * - Memory management for large lists
- * - Browser compatibility issues
- * - Performance optimization for 10k+ items
- * - Progressive initialization for large datasets
- * - Debug output optimization
- * - Accurate size calculations with caching
- * - Responsive size adjustments
- * - Modular architecture with testable utility functions
- *
- * Current Architecture:
- * - Four-layer DOM structure for optimal performance
- * - State management using Svelte 5's $state
- * - Reactive height and scroll calculations
- * - Configurable buffer zones for smooth scrolling
- * - Modular utility system with dedicated helper files:
- *   * scrollCalculation.ts: Complex scroll positioning logic
- *   * resizeObserver.ts: ResizeObserver management utilities
- *   * heightCalculation.ts: Debounced height measurement
- *   * virtualList.ts: Core virtual list calculations
- *   * virtualListDebug.ts: Debug information utilities
- * - Height caching and estimation system
- * - Progressive size adjustment system
- */
+<script lang="ts" generics="TItem">
+    /**
+     * SvelteVirtualList Implementation Journey
+     *
+     * Evolution & Architecture:
+     * 1. Initial Implementation ✓
+     *    - Basic virtual scrolling with fixed height items
+     *    - Single direction scrolling (top-to-bottom)
+     *    - Simple viewport calculations
+     *
+     * 2. Dynamic Height Enhancement ✓
+     *    - Added dynamic height calculation system
+     *    - Implemented debounced measurements
+     *    - Created height averaging mechanism for performance
+     *
+     * 3. Bidirectional Scrolling ✓
+     *    - Added bottomToTop mode
+     *    - Solved complex initialization issues with flexbox
+     *    - Implemented careful scroll position management
+     *
+     * 4. Performance Optimizations ✓
+     *    - Added element recycling through keyed each blocks
+     *    - Implemented RAF for smooth animations
+     *    - Optimized DOM updates with transform translations
+     *
+     * 5. Stability Improvements ✓
+     *    - Added ResizeObserver for responsive updates
+     *    - Implemented proper cleanup on component destruction
+     *    - Added debug mode for development assistance
+     *
+     * 6. Large Dataset Optimizations ✓
+     *    - Implemented chunked processing for 10k+ items
+     *    - Added progressive initialization system
+     *    - Deferred height calculations for better initial load
+     *    - Optimized memory usage for large lists
+     *    - Added progress tracking for initialization
+     *
+     * 7. Size Management Improvements ✓
+     *    - Implemented height caching system for measured items
+     *    - Added smart height estimation for unmeasured items
+     *    - Optimized resize handling with debouncing
+     *    - Added height recalculation on content changes
+     *    - Implemented progressive height adjustments
+     *
+     * 8. Code Quality & Maintainability ✓
+     *    - Extracted debug utilities for better testing
+     *    - Improved type safety throughout
+     *    - Added comprehensive documentation
+     *    - Optimized debug output to reduce noise
+     *
+     * 9. Future Improvements (Planned)
+     *    - Add horizontal scrolling support
+     *    - Implement variable-sized item caching
+     *    - Add keyboard navigation support
+     *    - Support for dynamic item updates
+     *    - Add accessibility enhancements
+     *
+     * Technical Challenges Solved:
+     * - Bottom-to-top scrolling in flexbox layouts
+     * - Dynamic height calculations without layout thrashing
+     * - Smooth scrolling on various devices
+     * - Memory management for large lists
+     * - Browser compatibility issues
+     * - Performance optimization for 10k+ items
+     * - Progressive initialization for large datasets
+     * - Debug output optimization
+     * - Accurate size calculations with caching
+     * - Responsive size adjustments
+     *
+     * Current Architecture:
+     * - Four-layer DOM structure for optimal performance
+     * - State management using Svelte 5's $state
+     * - Reactive height and scroll calculations
+     * - Configurable buffer zones for smooth scrolling
+     * - Chunked processing system for large datasets
+     * - Separated debug utilities for better testing
+     * - Height caching and estimation system
+     * - Progressive size adjustment system
+     */
 
 import { BROWSER } from "esm-env";
 import { onMount, tick } from "svelte";
@@ -200,13 +188,24 @@ const {
 	testId, // Base test ID for component elements (undefined = no data-testid attributes)
 }: SvelteVirtualListProps<TItem> = $props();
 
-/**
- * DOM References and Core State
- */
-let containerElement: HTMLElement; // Reference to the main container element
-let viewportElement: HTMLElement; // Reference to the scrollable viewport element
-let itemsElement: HTMLElement;
-const itemElements = $state<HTMLElement[]>([]); // Array of rendered item element references
+    /**
+     * Core configuration props with default values
+     * @type {SvelteVirtualListProps<TItem>}
+     */
+    const {
+        items = [], // Array of items to be rendered in the virtual list
+        defaultEstimatedItemHeight = 40, // Initial height estimate for items before measurement
+        debug = false, // Enable debug logging
+        renderItem, // Function to render each item
+        containerClass, // Custom class for the container element
+        viewportClass, // Custom class for the viewport element
+        contentClass, // Custom class for the content wrapper
+        itemsClass, // Custom class for the items wrapper
+        debugFunction, // Custom debug logging function
+        mode = 'topToBottom', // Scroll direction mode
+        bufferSize = 20, // Number of items to render outside visible area
+        testId // Base test ID for component elements (undefined = no data-testid attributes)
+    }: SvelteVirtualListProps<TItem> = $props()
 
 /**
  * Scroll and Height Management

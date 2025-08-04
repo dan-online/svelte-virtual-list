@@ -12,8 +12,7 @@ export type SvelteVirtualListMode = 'topToBottom' | 'bottomToTop'
  *
  * @typedef {Object} SvelteVirtualListProps
  */
-/* trunk-ignore(eslint/@typescript-eslint/no-explicit-any) */
-export type SvelteVirtualListProps<TItem = any> = {
+export type SvelteVirtualListProps<TItem> = {
     /**
      * Number of items to render outside the visible viewport for smooth scrolling.
      * @default 20
