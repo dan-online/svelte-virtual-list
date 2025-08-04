@@ -211,13 +211,17 @@ const itemElements = $state<HTMLElement[]>([]); // Array of rendered item elemen
 /**
  * Scroll and Height Management
  */
-let height = $state(0); // Container height
+const height = $state(0); // Container height
 const calculatedItemHeight = $state(defaultEstimatedItemHeight); // Current average item height
-let gridColumns = 1;
+const gridColumns = 1;
 
 /**
- * State Flags and Control
+ * Scroll and Height Management
  */
+const scrollTop = $state(0); // Current scroll position
+let height = $state(0); // Container height
+const calculatedItemHeight = $state(defaultEstimatedItemHeight); // Current average item height
+let gridColumns = $state(1);
 
 const isCalculatingHeight = $state(false); // Prevents concurrent height calculations
 let isScrolling = $state(false); // Tracks active scrolling state
