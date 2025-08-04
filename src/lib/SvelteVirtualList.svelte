@@ -1300,7 +1300,9 @@ $effect(() => {
                     gridColumns
                 )}px)"
             >
-                {#each displayItems() as currentItemWithIndex, i (currentItemWithIndex.originalIndex)}
+                {#each mode === 'bottomToTop' ? items
+                          .slice(visibleItems().start, visibleItems().end)
+                          .reverse() : items.slice(visibleItems().start, visibleItems().end) as currentItem, i ((currentItem as { id?: any })?.id ?? i)}
                     <!-- Only debug when visible range or average height changes -->
                     {#if debug && i === 0 && shouldShowDebugInfo(prevVisibleRange, visibleItems(), prevHeight, heightManager.averageHeight)}
                         {@const debugInfo = createDebugInfo(
