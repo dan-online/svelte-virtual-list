@@ -48,7 +48,6 @@
     ],
     "scripts": {
         "build": "vite build && pnpm run package",
-        "prepare": "vite build",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "dev": "vite dev",

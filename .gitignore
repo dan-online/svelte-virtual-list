@@ -12,7 +12,7 @@ coverage
 .vercel
 /.svelte-kit
 /build
-/dist
+# /dist
 
 # OS
 .DS_Store
